@@ -1,9 +1,12 @@
 #include <iostream>
 #include <cuda_runtime.h>
+#include <cudnn.h>
 #include <boost/program_options.hpp>
 
 using namespace std;
 using namespace boost::program_options;
+
+BOOST_LOG_ATTRIBUTE_KEYWORD(line_id, "LineID", unsigned int);
 
 //////////////////////
 // kernel functions //
@@ -11,12 +14,9 @@ using namespace boost::program_options;
 
 
 
-
-
 ///////////
 // Class //
 ///////////
-
 
 template <typename T>
 class GPUTest
@@ -138,7 +138,8 @@ void GPUTest<T>::deviceInfo(void)
 int main(int argc, char *argv[])
 {
     int deviceId=0;
-    
+
+    BOOST_LOG_TRIVIAL(info) << "An informational severity message.";
     options_description options1("This programm does GPU stress test.");
     options1.add_options()
         ("help,h",    "help mesage.")
@@ -166,7 +167,6 @@ int main(int argc, char *argv[])
         std::cout << e.what() << std::endl;
         exit(EXIT_FAILURE);        
     }
-
 
     
     GPUTest<int> g(deviceId);
