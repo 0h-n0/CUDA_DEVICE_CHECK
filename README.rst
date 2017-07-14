@@ -23,4 +23,18 @@ HOW TO GET
 .. code-block:: shell
 
    git clone --recursive https://github.com/0h-n0/CUDA_DEVICE_CHECK.git
-   
+
+
+BUILD
+----------
+
+.. code-block:: shell
+
+   cd CUDA_DEVICE_CHECK
+   mkdir build
+   cd build
+   cmake ..
+   make -j $(porc)
+
+RUN
+---------

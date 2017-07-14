@@ -2,11 +2,11 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <boost/program_options.hpp>
+#include "spdlog/spdlog.h"
 
 using namespace std;
 using namespace boost::program_options;
 
-BOOST_LOG_ATTRIBUTE_KEYWORD(line_id, "LineID", unsigned int);
 
 //////////////////////
 // kernel functions //
@@ -139,7 +139,6 @@ int main(int argc, char *argv[])
 {
     int deviceId=0;
 
-    BOOST_LOG_TRIVIAL(info) << "An informational severity message.";
     options_description options1("This programm does GPU stress test.");
     options1.add_options()
         ("help,h",    "help mesage.")
