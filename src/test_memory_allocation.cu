@@ -1,17 +1,18 @@
 #include <iostream>
+#include <thread>
+#include <memory>
 #include <cuda_runtime.h>
 #include <cudnn.h>
-#include <boost/program_options.hpp>
+//#include <boost/program_options.hpp>
 #include "spdlog/spdlog.h"
 
 using namespace std;
 using namespace boost::program_options;
-
+namespace spd = spdlog;
 
 //////////////////////
 // kernel functions //
 //////////////////////
-
 
 
 ///////////
@@ -19,44 +20,105 @@ using namespace boost::program_options;
 ///////////
 
 template <typename T>
-class GPUTest
+class GPUTest 
 {
 public:
-    GPUTest(int id);
+    GPUTest(const int id);
     void allocate();
     void graduallyAllocate();
     void deviceInfo();
     virtual ~GPUTest();
+    void setLog(void);
+    std::shared_ptr<spd::logger> console;
 private:
     long long int size;
     int device_id;
+    // for device prof;
+    
 };
 
+template <typename T>
+void GPUTest<T>::setLog(void)
+{
+    try {
+        // console->info(function_name, message);
+        console = spd::stdout_color_mt("console");
+        spd::set_level(spd::level::debug);
+        console->info("Set console log.");
+    }catch (const spd::spdlog_ex& ex){
+        cout  << "Log init failed: " << ex.what() << endl;
+    }
+}
 
 template <typename T>
-GPUTest<T>::GPUTest(int id) 
+GPUTest<T>::GPUTest(const int id)
 {
     cudaSetDevice(id);
     device_id = id;
-};
+}
 
 template <typename T>
 GPUTest<T>::~GPUTest()
 {
     cudaDeviceReset();
-};
+}
 
 template <typename T>
 void GPUTest<T>::allocate(void)
 {
-
+    cout << "GPUTEST" << endl;
 }
 
 template <typename T>
 void GPUTest<T>::graduallyAllocate(void)
 {
+    console->info("TEST: Gradual increasment of Memory Allocation on gpu device.");
+    int mb_size = 1 << 10 << 10;
+    int increase_factor = 1 << 5;
+    float *fd, *fh;
+    int *id, *ih;
+    char *cd, *ch;
+    int maxsize = 8;
+    console->info("TEST: MAX Allocation Size {} GB on gpu device.", maxsize);
+    console->info("SET:  Increase factor {} MB on gpu device.", increase_factor);
 
+    console->info("TEST: char[{}bytes].", sizeof(char));
+    for(int i = 0 ;i < maxsize; ++i){
+        
+    }
+    console->info("SLEEP: {} seconds.", 20);    
+    std::this_thread::sleep_for(20s);
+
+    
+
+    console->info("TEST: int[{}bytes].", sizeof(int));
+    for(int i = 0 ;i < maxsize; ++i){
+        
+    }
+    console->info("SLEEP: {} seconds.", 20);    
+    std::this_thread::sleep_for(20s);
+    
+    console->info("TEST: float[{}bytes].", sizeof(float));
+    for(int i = 0 ;i < maxsize; ++i){
+        
+    }
+    console->info("SLEEP: {} seconds.", 20);    
+    std::this_thread::sleep_for(20s);
+
+
+    console->info("TEST: dobule[{}bytes].", sizeof(double));
+    for(int i = 0 ;i < maxsize; ++i){
+        
+    }
+
+    
+    
+    
+
+    cudaDeviceSynchronize();
+    
 }
+
 template <typename T>
 void GPUTest<T>::deviceInfo(void)
 {
@@ -139,7 +201,9 @@ int main(int argc, char *argv[])
 {
     int deviceId=0;
 
-    options_description options1("This programm does GPU stress test.");
+    // To change argments parser from boost to Taywee/args?
+    /* 
+   options_description options1("This programm does GPU stress test.");
     options1.add_options()
         ("help,h",    "help mesage.")
         ("deviceid,d", value<int>(),   "set DeviceId of GPU.");
@@ -166,9 +230,14 @@ int main(int argc, char *argv[])
         std::cout << e.what() << std::endl;
         exit(EXIT_FAILURE);        
     }
+    */
 
-    
+
     GPUTest<int> g(deviceId);
-    g.deviceInfo();
+    g.setLog();
+    //g.deviceInfo();
+    g.graduallyAllocate();
+
     return 0;
 }
+
