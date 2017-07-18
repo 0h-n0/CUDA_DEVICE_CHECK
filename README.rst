@@ -24,6 +24,15 @@ HOW TO GET
 
    git clone --recursive https://github.com/0h-n0/CUDA_DEVICE_CHECK.git
 
+OR                
+^^^^^^
+
+.. code-block:: shell
+
+   git clone https://github.com/0h-n0/CUDA_DEVICE_CHECK.git
+   git submodule init
+   git submodule update
+
 
 BUILD
 ----------
@@ -38,3 +47,10 @@ BUILD
 
 RUN
 ---------
+
+
+
+REFERENCE
+-----------
+
+* http://wili.cc/blog/gpu-burn.html

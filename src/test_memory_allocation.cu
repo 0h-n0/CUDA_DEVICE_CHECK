@@ -1,5 +1,14 @@
+/////////////////////////////////////////////////////////////////////////////
+// This application check how mach memory can be allocated on your device. //
+// The amout of allocated memory gradually is increased in this program.   //
+// Once allocateion reach to max size, Iterarions is stopped and your can  //
+// stress on your device via another application                           //
+/////////////////////////////////////////////////////////////////////////////
+
 #include <iostream>
+#include <string>
 #include <thread>
+#include <chrono>
 #include <memory>
 #include <cuda_runtime.h>
 #include <cudnn.h>
@@ -7,44 +16,49 @@
 #include "spdlog/spdlog.h"
 
 using namespace std;
-using namespace boost::program_options;
+//using namespace boost::program_options;
 namespace spd = spdlog;
 
 //////////////////////
 // kernel functions //
 //////////////////////
 
-
 ///////////
 // Class //
 ///////////
-
+static int number = 0;
 template <typename T>
 class GPUTest 
 {
 public:
     GPUTest(const int id);
-    void allocate();
     void graduallyAllocate();
-    void deviceInfo();
+    void showDeviceInfo();
+    void getDeviceInfo();
     virtual ~GPUTest();
-    void setLog(void);
+    void _setLog(void);
     std::shared_ptr<spd::logger> console;
+    cudaError_t err;
 private:
     long long int size;
-    int device_id;
-    // for device prof;
+    int deviceID;
+    unsigned long long int totalGlobalMem;
+    size_t freeMem, totalMem;
     
+    // for device prof;
 };
 
 template <typename T>
-void GPUTest<T>::setLog(void)
+void GPUTest<T>::_setLog(void)
 {
     try {
+        number++;
         // console->info(function_name, message);
-        console = spd::stdout_color_mt("console");
+        string s = "GPUTest" + to_string(number);
+        console = spd::stdout_color_mt(s);
         spd::set_level(spd::level::debug);
-        console->info("Set console log.");
+        console->info("SET: console log.");
+
     }catch (const spd::spdlog_ex& ex){
         cout  << "Log init failed: " << ex.what() << endl;
     }
@@ -53,8 +67,10 @@ void GPUTest<T>::setLog(void)
 template <typename T>
 GPUTest<T>::GPUTest(const int id)
 {
+    this->_setLog();
+    console->info("SET: GPU Device ID [{}].", id);    
     cudaSetDevice(id);
-    device_id = id;
+    deviceID = id;
 }
 
 template <typename T>
@@ -64,63 +80,59 @@ GPUTest<T>::~GPUTest()
 }
 
 template <typename T>
-void GPUTest<T>::allocate(void)
-{
-    cout << "GPUTEST" << endl;
-}
-
-template <typename T>
 void GPUTest<T>::graduallyAllocate(void)
 {
     console->info("TEST: Gradual increasment of Memory Allocation on gpu device.");
-    int mb_size = 1 << 10 << 10;
-    int increase_factor = 1 << 5;
-    float *fd, *fh;
-    int *id, *ih;
-    char *cd, *ch;
+    size_t mb_size = 1 << 10 << 10;
+    int increase_factor = 1 << 3;
+    T *fd, *fh;
     int maxsize = 8;
+    int i = 1;
+    int total = 0;
+    int sleep_seconds = 60;
     console->info("TEST: MAX Allocation Size {} GB on gpu device.", maxsize);
     console->info("SET:  Increase factor {} MB on gpu device.", increase_factor);
-
-    console->info("TEST: char[{}bytes].", sizeof(char));
-    for(int i = 0 ;i < maxsize; ++i){
-        
+    console->info("TEST: unit = [{}bytes].", sizeof(T));
+    console->info("Increasement scedule is [mb_unit [{}*1024*1024] * Increase factor[{}] * time step]."
+                  , sizeof(T), increase_factor);
+    while(maxsize * 1024 > sizeof(T) * increase_factor * i){
+        console->info("Allocation: {} MB on GPU. ", sizeof(T) * increase_factor * i);
+        total +=  sizeof(T) * increase_factor * 1024 * 1024 * i;
+        err = cudaMalloc((void **)&fd, sizeof(T) * increase_factor * 1024 * 1024 * i);
+        if(cudaSuccess != err){
+            console->info("Error: can't allocate {} MB on GPU.", sizeof(T) * increase_factor * i);            
+            err = cudaMalloc((void **)&fd, sizeof(T) * increase_factor * 1024 * 1024 * --i);            
+            console->info("Reallocation: {} MB on GPU. ", sizeof(T) * increase_factor * i);
+            console->info("SLEEP: {} seconds.", sleep_seconds);
+            console->info("CHECK: stress on your device via another application.");                
+            std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+            cudaFree(fd);        
+            break;
+        }
+        cudaFree(fd);                
+        ++i;
     }
-    console->info("SLEEP: {} seconds.", 20);    
-    std::this_thread::sleep_for(20s);
-
-    
-
-    console->info("TEST: int[{}bytes].", sizeof(int));
-    for(int i = 0 ;i < maxsize; ++i){
-        
-    }
-    console->info("SLEEP: {} seconds.", 20);    
-    std::this_thread::sleep_for(20s);
-    
-    console->info("TEST: float[{}bytes].", sizeof(float));
-    for(int i = 0 ;i < maxsize; ++i){
-        
-    }
-    console->info("SLEEP: {} seconds.", 20);    
-    std::this_thread::sleep_for(20s);
-
-
-    console->info("TEST: dobule[{}bytes].", sizeof(double));
-    for(int i = 0 ;i < maxsize; ++i){
-        
-    }
-
-    
-    
-    
-
     cudaDeviceSynchronize();
+}
+
+
+template <typename T>
+void GPUTest<T>::getDeviceInfo(void)
+{
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, deviceID);
+    totalGlobalMem = deviceProp.totalGlobalMem;
+    console->info("Total amount of global memory:{} GBytes ({} bytes)",
+                  (float)totalGlobalMem / pow(1024.0, 3), (unsigned long long)totalGlobalMem);
+
+    cudaMemGetInfo(&freeMem, &totalMem);
+    console->info("Free Mem:{}MB, Total Mem:{}MB", int(freeMem/1024/1024), int(totalMem/1024/1024));
+    
     
 }
 
 template <typename T>
-void GPUTest<T>::deviceInfo(void)
+void GPUTest<T>::showDeviceInfo(void)
 {
     int dev = 0, driverVersion = 0, runtimeVersion = 0;
     cudaSetDevice(dev);
@@ -196,48 +208,31 @@ void GPUTest<T>::deviceInfo(void)
 // main function //
 ///////////////////
 
-
 int main(int argc, char *argv[])
 {
-    int deviceId=0;
+    int deviceID=1;
 
-    // To change argments parser from boost to Taywee/args?
-    /* 
-   options_description options1("This programm does GPU stress test.");
-    options1.add_options()
-        ("help,h",    "help mesage.")
-        ("deviceid,d", value<int>(),   "set DeviceId of GPU.");
-        //("memory_allocation_size,s",  "set Memory allocation size (Mb).");
+
+
+    // TODO: make argments parser.
+    GPUTest<int> *g = new GPUTest<int>(deviceID);
+    g->getDeviceInfo();
+    //g->graduallyAllocate();
+
+    GPUTest<float> *fg = new GPUTest<float>(deviceID);
+    fg->getDeviceInfo();
+    fg->graduallyAllocate();
+
+    GPUTest<double> *dg = new GPUTest<double>(deviceID);
+    dg->getDeviceInfo();
+    dg->graduallyAllocate();
+
+    GPUTest<char> *cg = new GPUTest<char>(deviceID);
+    cg->getDeviceInfo();
+    cg->graduallyAllocate();
     
-    variables_map values;
-    try{
-        store(parse_command_line(argc, argv, options1), values);
-        notify(values);
-        if (values.count("help")) {
-			cout << options1 << endl;
-            exit(EXIT_FAILURE);
-        }
-        if (!values.count("deviceid")) {
-			// options_description は標準出力に投げることが出来る
-			cout << options1 << endl;
-            exit(EXIT_FAILURE);
-		}
-		if (values.count("deviceid"))
-            cout << "set DeviceId: " <<  endl;
-            //cout << "set DeviceId: " << values["deviceid"].as<string>() << endl;
-            
-    }catch(std::exception &e){
-        std::cout << e.what() << std::endl;
-        exit(EXIT_FAILURE);        
-    }
-    */
-
-
-    GPUTest<int> g(deviceId);
-    g.setLog();
-    //g.deviceInfo();
-    g.graduallyAllocate();
-
+    cudaDeviceReset();
+    
     return 0;
 }
 
