@@ -13,7 +13,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 //#include <boost/program_options.hpp>
-#include "spdlog/spdlog.h"
+#include "../spdlog/include/spdlog/spdlog.h"
 
 using namespace std;
 //using namespace boost::program_options;
@@ -211,7 +211,6 @@ void GPUTest<T>::showDeviceInfo(void)
 int main(int argc, char *argv[])
 {
     int deviceID=1;
-
 
 
     // TODO: make argments parser.
